@@ -10,8 +10,22 @@ download_folder = os.path.join(os.path.expanduser('~'), 'Downloads')
 
 class FileSorter(FileSystemEventHandler):
     def on_created(self, event):
+        temp_file_paths = [
+            os.path.join(download_folder, f)
+            for f in os.listdir(download_folder)
+            if f.endswith(('.tmp', '.crdownload'))
+        ]
+
+        # Wait until the temp files are no longer present
+        while any(os.path.exists(p) for p in temp_file_paths):
+            time.sleep(1)
+
         # Sort the files in the download folder
-        files = os.listdir(download_folder)
+        files = [
+            f
+            for f in os.listdir(download_folder)
+            if not f.endswith(('.tmp', '.crdownload')) and os.path.getsize(os.path.join(download_folder, f)) > 1_000
+        ]
         for file in files:
             file_name, file_ext = os.path.splitext(file)
             dest_folder = os.path.join(download_folder, file_ext[1:])
@@ -36,7 +50,9 @@ observer.start()
 # Run the observer indefinitely
 try:
     while True:
-        time.sleep(1)
+        # Sort the files every 10 seconds
+        time.sleep(10)
+        event_handler.on_created(None)
 except KeyboardInterrupt:
     observer.stop()
 
